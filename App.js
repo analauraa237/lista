@@ -1,63 +1,97 @@
 import React, { Component } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Keyboard
-} from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Keyboard, Image } from 'react-native';
 
-export default class App extends Component {
+export default class ToDoApp extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      input: '',
-      nome: ''
+      tarefa: '',
+      lista: []
     };
-
-    this.gravaNome = this.gravaNome.bind(this);
   }
 
-  async componentDidMount() {
-    try {
-      const nomeSalvo = await AsyncStorage.getItem('nome');
-      if (nomeSalvo !== null) {
-        this.setState({ nome: nomeSalvo });
+  adicionarTarefa = () => {
+    if (this.state.tarefa.trim() !== '') {
+      const novaTarefa = {
+        id: Date.now().toString(),
+        texto: this.state.tarefa,
+        concluida: false
+      };
+      this.setState(prevState => ({
+        lista: [...prevState.lista, novaTarefa],
+        tarefa: ''
+      }));
+      Keyboard.dismiss();
+    }
+  };
+
+  alternarConclusao = (id) => {
+    const novaLista = this.state.lista.map(item => {
+      if (item.id === id) {
+        return { ...item, concluida: !item.concluida };
       }
-    } catch (error) {
-      console.error('Erro ao recuperar nome: ', error);
-    }
-  }
+      return item;
+    });
+    this.setState({ lista: novaLista });
+  };
 
-  async componentDidUpdate(_, prevState) {
-    if (prevState.nome !== this.state.nome) {
-      await AsyncStorage.setItem('nome', this.state.nome);
-    }
-  }
+  renderItem = ({ item }) => (
+    <View style={styles.itemContainer}>
+      <TouchableOpacity
+        style={styles.checkButton}
+        onPress={() => this.alternarConclusao(item.id)}
+      >
+        {item.concluida ? (
+          <Image
+            source={require('./assets/pokeball.png')}
+            style={styles.checkImage}
+          />
+        ) : (
+          <Image
+            source={require('./assets/poke_pika_wink.png')}
+            style={styles.checkImage}
+          />
+        )}
+      </TouchableOpacity>
 
-  gravaNome() {
-    this.setState({ nome: this.state.input });
-    Keyboard.dismiss();
-  }
+      <View style={styles.itemTextoContainer}>
+        <Text style={[styles.itemTexto, item.concluida && styles.itemConcluida]}>
+          {item.texto}
+        </Text>
+      </View>
+    </View>
+  );
 
   render() {
     return (
       <View style={styles.container}>
-        <View style={styles.viewInput}>
+        <Text style={styles.boasVindas}>
+          oi, treinador! pronto para completar suas missões?
+        </Text>
+
+        <Text style={styles.contador}>
+          🏆 Tarefas concluídas: {this.state.lista.filter(tarefa => tarefa.concluida).length}
+        </Text>
+
+        <View style={styles.inputArea}>
           <TextInput
             style={styles.input}
-            value={this.state.input}
-            onChangeText={(text) => this.setState({ input: text })}
-            placeholder="Digite seu nome"
+            value={this.state.tarefa}
+            onChangeText={(text) => this.setState({ tarefa: text })}
+            placeholder="Digite uma tarefa"
+            placeholderTextColor="#aaa"
           />
-          <TouchableOpacity style={styles.botao} onPress={this.gravaNome}>
-            <Text style={{ color: '#FFF', fontSize: 20 }}>+</Text>
+          <TouchableOpacity style={styles.botao} onPress={this.adicionarTarefa}>
+            <Text style={styles.botaoTexto}>Adione na lista</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.nome}>{this.state.nome}</Text>
+        <FlatList
+          data={this.state.lista}
+          keyExtractor={(item) => item.id}
+          renderItem={this.renderItem}
+          style={styles.lista}
+        />
       </View>
     );
   }
@@ -66,30 +100,85 @@ export default class App extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    marginTop: 20,
+    backgroundColor: '#FFEB3B',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
   },
-  viewInput: {
+  boasVindas: {
+    fontSize: 18,
+    color: '#000000',
+    fontWeight: 'bold',
+    marginBottom: 15,
+  },
+  contador: {
+    fontSize: 16,
+    color: '#2A75BB',
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  inputArea: {
     flexDirection: 'row',
-    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#3B4CCA',
+    backgroundColor: '#fff',
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 20,
   },
   input: {
-    width: 350,
-    height: 40,
-    borderColor: '#000',
-    borderWidth: 1,
-    padding: 10,
+    flex: 1,
+    height: 45,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+    fontSize: 16,
+    color: '#3B4CCA',
   },
   botao: {
-    backgroundColor: '#222',
-    height: 40,
+    backgroundColor: '#3B4CCA',
+    paddingHorizontal: 15,
     justifyContent: 'center',
-    padding: 10,
-    marginLeft: 3,
   },
-  nome: {
-    marginTop: 15,
-    fontSize: 30,
-    textAlign: 'center',
+  botaoTexto: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  lista: {
+    width: '100%',
+    maxWidth: 400,
+  },
+  itemContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 2,
+    borderColor: '#CC0000',
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+  },
+  checkButton: {
+    marginRight: 10,
+  },
+  checkImage: {
+    width: 28,
+    height: 28,
+  },
+  itemTextoContainer: {
+    flex: 1,
+  },
+  itemTexto: {
+    fontSize: 16,
+    color: '#2A75BB',
+    fontWeight: '600',
+  },
+  itemConcluida: {
+    textDecorationLine: 'line-through',
+    color: '#888',
+    opacity: 0.6,
   },
 });
